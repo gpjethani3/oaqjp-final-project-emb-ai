@@ -1,28 +1,49 @@
 import requests
 
-def emotion_detector (text_to_analyse):
-   URL =  'https://sn-watson-emotion.labs.skills.network/v1/watson.runtime.nlp.v1/NlpService/EmotionPredict'
-   HEADERS =  {"grpc-metadata-mm-model-id": "emotion_aggregated-workflow_lang_en_stock"}
-   myobj =  { "raw_document": { "text": text_to_analyse} }
-   response = requests.post(URL, json = myobj, headers=HEADERS)
-   response_data = response.json()
-   emotions = response_data['emotionPredictions'][0]['emotion']
 
-   anger_score = emotions['anger']
-   disgust_score = emotions['disgust']
-   fear_score = emotions['fear']
-   joy_score = emotions['joy']
-   sadness_score = emotions['sadness'] 
-
-   dominant_emotion = max(emotions, key=emotions.get)
-
-   formatted_output = {
-            'anger': anger_score,
-            'disgust': disgust_score,
-            'fear': fear_score,
-            'joy': joy_score,
-            'sadness': sadness_score,
-            'dominant_emotion': dominant_emotion
+def emotion_detector(text_to_analyse):
+    # Check if the entry is blank or just whitespace
+    if not text_to_analyse or text_to_analyse.strip() == "":
+        return {
+            'anger': None,
+            'disgust': None,
+            'fear': None,
+            'joy': None,
+            'sadness': None,
+            'dominant_emotion': None
         }
 
-   return formatted_output
+    url = 'https://sn-watson-emotion.labs.skills.network/v1/watson.runtime.nlp.v1/NlpService/EmotionPredict'
+    headers = {"grpc-metadata-mm-model-id": "emotion_aggregated-workflow_lang_en_stock"}
+    myobj = {"raw_document": {"text": text_to_analyse}}
+
+    response = requests.post(url, json=myobj, headers=headers)
+
+    # 1. Handle standard successful response
+    if response.status_code == 200:
+        response_data = response.json()
+        emotions = response_data['emotionPredictions'][0]['emotion']
+
+        return {
+            'anger': emotions['anger'],
+            'disgust': emotions['disgust'],
+            'fear': emotions['fear'],
+            'joy': emotions['joy'],
+            'sadness': emotions['sadness'],
+            'dominant_emotion': max(emotions, key=emotions.get)
+        }
+
+    # 2. Handle a 400 Bad Request response from the server explicitly
+    elif response.status_code == 400:
+        return {
+            'anger': None,
+            'disgust': None,
+            'fear': None,
+            'joy': None,
+            'sadness': None,
+            'dominant_emotion': None
+        }
+
+    # 3. Handle any other unexpected server error status codes
+    else:
+        return {"error": f"Request failed with status code {response.status_code}"}
